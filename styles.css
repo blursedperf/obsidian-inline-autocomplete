@@ -1,0 +1,158 @@
+/* ==========================================================================
+   Inline Autocomplete — Obsidian Plugin Styles
+   ========================================================================== */
+
+/* 1. Inline Ghost Text Widget (CodeMirror 6) */
+.iac-ghost-wrapper {
+	display: inline;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+.iac-ghost-text {
+	color: var(--text-faint);
+	opacity: 0.75;
+	font-style: italic;
+	cursor: pointer;
+	pointer-events: auto;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+.iac-ghost-counter {
+	display: inline-block;
+	margin-left: 6px;
+	padding: 1px 6px;
+	font-size: 0.7em;
+	font-style: normal;
+	font-weight: 600;
+	line-height: 1.4;
+	vertical-align: middle;
+	border-radius: 4px;
+	background-color: var(--background-modifier-hover);
+	color: var(--text-muted);
+	border: 1px solid var(--background-modifier-border);
+	cursor: pointer;
+	pointer-events: auto;
+}
+
+/* Touch ergonomics for iOS and iPadOS */
+.is-mobile .iac-ghost-text {
+	padding: 2px 4px;
+	border-radius: 4px;
+	background-color: rgba(128, 128, 128, 0.08);
+}
+
+.is-mobile .iac-ghost-counter {
+	padding: 3px 8px;
+	font-size: 0.76em;
+}
+
+.is-mobile .iac-suggest-item {
+	padding: 8px 10px;
+	min-height: 40px;
+}
+
+/* 2. Popup Suggestion Menu (EditorSuggest) */
+.iac-suggest-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 4px 8px;
+}
+
+.iac-suggest-left {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.iac-suggest-icon {
+	font-size: 0.88rem;
+	flex-shrink: 0;
+	width: 18px;
+	text-align: center;
+}
+
+.iac-suggest-label {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-size: 0.9rem;
+	color: var(--text-normal);
+}
+
+.iac-suggest-match {
+	font-weight: 700;
+	color: var(--text-accent);
+}
+
+.iac-suggest-right {
+	flex-shrink: 0;
+}
+
+.iac-suggest-badge {
+	font-size: 0.7rem;
+	font-weight: 500;
+	padding: 2px 6px;
+	border-radius: 999px;
+	background-color: var(--background-secondary);
+	color: var(--text-muted);
+	border: 1px solid var(--background-modifier-border);
+}
+
+.iac-badge-snippet {
+	color: var(--color-orange, #d9822b);
+}
+
+.iac-badge-phrase {
+	color: var(--color-green, #2ea043);
+}
+
+.iac-badge-note,
+.iac-badge-heading {
+	color: var(--color-blue, #388bfd);
+}
+
+/* 3. Snippet Creation Modal & Status Bar */
+.iac-snippet-modal .iac-modal-field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-top: 12px;
+}
+
+.iac-snippet-modal .iac-modal-label {
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.iac-snippet-modal .iac-modal-textarea {
+	width: 100%;
+	resize: vertical;
+	font-family: var(--font-monospace);
+	padding: 8px 10px;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	color: var(--text-normal);
+}
+
+.iac-modal-footer {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 16px;
+}
+
+.iac-statusbar {
+	cursor: pointer;
+	font-variant-numeric: tabular-nums;
+}
+
+.iac-statusbar.is-disabled {
+	color: var(--text-faint);
+}

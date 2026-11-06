@@ -1,0 +1,10 @@
+{
+	"id": "inline-autocomplete",
+	"name": "Inline Autocomplete",
+	"version": "1.0.0",
+	"minAppVersion": "1.4.0",
+	"description": "Autocomplete words, phrases, note titles, and snippets with fast, offline inline ghost text and popup suggestions.",
+	"author": "Jason Gunst",
+	"authorUrl": "https://github.com/blursedperf",
+	"isDesktopOnly": false
+}

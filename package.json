@@ -1,0 +1,37 @@
+{
+	"name": "obsidian-inline-autocomplete",
+	"version": "1.0.0",
+	"description": "Autocomplete words, phrases, note titles, and snippets with fast, offline inline ghost text and popup suggestions.",
+	"main": "main.js",
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"test": "esbuild test/indexer.test.ts --bundle --platform=node --format=cjs --loader:.txt=text | node"
+	},
+	"keywords": [
+		"obsidian",
+		"obsidian-plugin",
+		"autocomplete",
+		"ghost-text",
+		"snippets",
+		"codemirror",
+		"offline",
+		"dictionary"
+	],
+	"author": "Jason Gunst",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/blursedperf/obsidian-inline-autocomplete.git"
+	},
+	"devDependencies": {
+		"@codemirror/state": "^6.4.1",
+		"@codemirror/view": "^6.26.3",
+		"@types/node": "^20.11.0",
+		"builtin-modules": "^3.3.0",
+		"esbuild": "0.21.5",
+		"obsidian": "^1.5.7",
+		"tslib": "2.6.2",
+		"typescript": "5.4.5"
+	}
+}
