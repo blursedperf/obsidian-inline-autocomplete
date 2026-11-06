@@ -154,6 +154,12 @@ serendipity
 	const afterLinkCandidates = engine.query(afterClosedLinkCtx, DEFAULT_SETTINGS);
 	assert.ok(afterLinkCandidates.length > 0);
 	assert.equal(afterLinkCandidates[0].insertText, "Serendipity");
+	// 8. Verify Mobile Disabling Setting Defaults
+	assert.equal(DEFAULT_SETTINGS.disableOnMobile, false);
+	assert.equal(DEFAULT_SETTINGS.enabled, true);
+
+	const disabledSettings = { ...DEFAULT_SETTINGS, enabled: false };
+	assert.equal(engine.query(afterClosedLinkCtx, disabledSettings).length, 0);
 }
 
 console.log("All Inline Autocomplete Indexer tests passed!");

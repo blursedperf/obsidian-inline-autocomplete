@@ -252,7 +252,7 @@ function computeGhostStateForView(
 	view: EditorView,
 	plugin: InlineAutocompletePlugin
 ): GhostState | null {
-	if (!plugin.settings.enabled || !plugin.settings.enableGhostText) {
+	if (!plugin.isAutocompleteActive() || !plugin.settings.enableGhostText) {
 		return null;
 	}
 	const sel = view.state.selection.main;
@@ -325,7 +325,7 @@ export function createGhostTextExtension(
 			private pendingFrame: number | null = null;
 
 			update(update: ViewUpdate): void {
-				if (!plugin.settings.enabled || !plugin.settings.enableGhostText) {
+				if (!plugin.isAutocompleteActive() || !plugin.settings.enableGhostText) {
 					return;
 				}
 				if (!update.docChanged) {

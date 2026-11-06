@@ -29,6 +29,12 @@ export default class InlineAutocompletePlugin extends Plugin {
 	private statusBarEl: HTMLElement | null = null;
 	private popupSuggest: InlinePopupSuggest | null = null;
 
+	public isAutocompleteActive(): boolean {
+		if (!this.settings.enabled) return false;
+		if (Platform.isMobile && this.settings.disableOnMobile) return false;
+		return true;
+	}
+
 	async onload(): Promise<void> {
 		await this.loadSettings();
 
@@ -69,11 +75,14 @@ export default class InlineAutocompletePlugin extends Plugin {
 			id: "accept-ghost-completion",
 			name: "Accept inline ghost completion",
 			icon: "check",
-			editorCallback: (editor: Editor) => {
+			editorCheckCallback: (checking: boolean, editor: Editor) => {
+				if (!this.isAutocompleteActive()) return false;
+				if (checking) return true;
 				const cmView = (editor as unknown as { cm?: EditorView }).cm;
 				if (cmView) {
 					acceptFullGhostCompletion(cmView);
 				}
+				return true;
 			},
 		});
 
@@ -81,11 +90,14 @@ export default class InlineAutocompletePlugin extends Plugin {
 			id: "accept-next-word-ghost-completion",
 			name: "Accept next word of ghost completion",
 			icon: "arrow-right",
-			editorCallback: (editor: Editor) => {
+			editorCheckCallback: (checking: boolean, editor: Editor) => {
+				if (!this.isAutocompleteActive()) return false;
+				if (checking) return true;
 				const cmView = (editor as unknown as { cm?: EditorView }).cm;
 				if (cmView) {
 					acceptNextWordGhostCompletion(cmView);
 				}
+				return true;
 			},
 		});
 
@@ -93,11 +105,14 @@ export default class InlineAutocompletePlugin extends Plugin {
 			id: "cycle-next-ghost-completion",
 			name: "Cycle next inline suggestion",
 			icon: "refresh-cw",
-			editorCallback: (editor: Editor) => {
+			editorCheckCallback: (checking: boolean, editor: Editor) => {
+				if (!this.isAutocompleteActive()) return false;
+				if (checking) return true;
 				const cmView = (editor as unknown as { cm?: EditorView }).cm;
 				if (cmView) {
 					cycleActiveGhostCompletion(cmView, 1);
 				}
+				return true;
 			},
 		});
 
@@ -191,12 +206,18 @@ export default class InlineAutocompletePlugin extends Plugin {
 
 		// 6. Initial Vault Scan, Local Full Dictionary Load, & Incremental File Watchers
 		this.app.workspace.onLayoutReady(async () => {
+			if (!this.isAutocompleteActive()) {
+				return;
+			}
 			await this.loadLocalDictionary();
 			await this.rebuildVaultIndex();
 		});
 
 		const debouncedIndexFile = debounce(
 			async (file: TFile) => {
+				if (!this.isAutocompleteActive()) {
+					return;
+				}
 				try {
 					const content = await this.app.vault.cachedRead(file);
 					this.engine.indexFile(file.path, file.basename, content);
@@ -226,6 +247,9 @@ export default class InlineAutocompletePlugin extends Plugin {
 		this.registerEvent(
 			this.app.vault.on("delete", (file) => {
 				if (file instanceof TFile && file.extension === "md") {
+					if (!this.isAutocompleteActive()) {
+						return;
+					}
 					this.engine.removeFile(file.path);
 					this.updateStatusBar();
 				}
@@ -234,6 +258,9 @@ export default class InlineAutocompletePlugin extends Plugin {
 		this.registerEvent(
 			this.app.vault.on("rename", (file, oldPath) => {
 				if (file instanceof TFile && file.extension === "md") {
+					if (!this.isAutocompleteActive()) {
+						return;
+					}
 					this.engine.removeFile(oldPath);
 					debouncedIndexFile(file);
 				}
@@ -339,6 +366,9 @@ export default class InlineAutocompletePlugin extends Plugin {
 	public async loadSettings(): Promise<void> {
 		const raw = (await this.loadData()) as Partial<AutocompleteSettings> | null;
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, raw);
+		if (this.settings.disableOnMobile === undefined) {
+			this.settings.disableOnMobile = DEFAULT_SETTINGS.disableOnMobile;
+		}
 		if (!Array.isArray(this.settings.snippets)) {
 			this.settings.snippets = [...DEFAULT_SETTINGS.snippets];
 		}

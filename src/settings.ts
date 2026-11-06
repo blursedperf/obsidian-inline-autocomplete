@@ -1,4 +1,4 @@
-import { App, Notice, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, Platform, PluginSettingTab, Setting } from "obsidian";
 import type InlineAutocompletePlugin from "./main";
 import { CreateSnippetModal } from "./snippet-modal";
 
@@ -23,6 +23,29 @@ export class InlineAutocompleteSettingTab extends PluginSettingTab {
 					.onChange(async (val) => {
 						this.plugin.settings.enabled = val;
 						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Disable on mobile devices")
+			.setDesc(
+				"Turn off inline ghost text, popup suggestions, and background indexing when running on phones or tablets"
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.disableOnMobile)
+					.onChange(async (val) => {
+						this.plugin.settings.disableOnMobile = val;
+						await this.plugin.saveSettings();
+						if (Platform.isMobile) {
+							if (val) {
+								this.plugin.engine.clear();
+							} else {
+								await this.plugin.loadLocalDictionary();
+								await this.plugin.rebuildVaultIndex();
+							}
+							this.display();
+						}
 					})
 			);
 

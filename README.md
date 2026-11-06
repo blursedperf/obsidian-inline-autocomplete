@@ -37,6 +37,7 @@ On iOS, iPadOS, and Android:
 - **Tap Ghost Text**: Tap the dimmed ghost text directly to accept it without dismissing your virtual keyboard.
 - **Tap Counter Badge**: Tap the `1/5 ↻` badge to cycle to the next candidate.
 - **Mobile Toolbar**: Add commands (`Accept inline ghost completion`, `Accept next word of ghost completion`, `Cycle next inline suggestion`) directly to your Obsidian mobile quick toolbar.
+- **Disable on Mobile Option**: If you prefer autocomplete strictly on desktop, toggle **Disable on mobile devices** in plugin settings to completely turn off ghost text, popups, and background indexing on phones and tablets.
 
 ---
 
