@@ -61,6 +61,8 @@ export interface IndexStats {
 export interface AutocompleteSettings {
 	/** Master toggle for autocomplete */
 	enabled: boolean;
+	/** Disable autocomplete entirely on mobile devices (phones and tablets) */
+	disableOnMobile: boolean;
 	/** Show inline dimmed ghost text at the cursor */
 	enableGhostText: boolean;
 	/** Show floating popup suggestion list */
@@ -133,6 +135,7 @@ export const DEFAULT_SNIPPETS: CustomSnippet[] = [
 
 export const DEFAULT_SETTINGS: AutocompleteSettings = {
 	enabled: true,
+	disableOnMobile: false,
 	enableGhostText: true,
 	enablePopupSuggest: true,
 	minPrefixLength: 2,

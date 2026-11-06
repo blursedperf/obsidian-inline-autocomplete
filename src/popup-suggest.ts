@@ -67,7 +67,7 @@ export class InlinePopupSuggest extends EditorSuggest<CompletionCandidate> {
 		file: TFile | null
 	): EditorSuggestTriggerInfo | null {
 		const { settings } = this.plugin;
-		if (!settings.enabled || !settings.enablePopupSuggest) {
+		if (!this.plugin.isAutocompleteActive() || !settings.enablePopupSuggest) {
 			this.close();
 			return null;
 		}
