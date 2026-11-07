@@ -54,7 +54,7 @@ Inline Autocomplete unifies multiple local sources into a ranked suggestion pipe
 
 ---
 
-## Security & Privacy Guarantee
+## Security & Privacy
 
 - **Zero Network Activity**: Inline Autocomplete contains **no network requests**, telemetry, tracking, analytics, or external API calls.
 - **No Remote Dependencies**: The English dictionary and vocabulary are bundled directly into the plugin. No secondary downloads or cloud connections are required.
