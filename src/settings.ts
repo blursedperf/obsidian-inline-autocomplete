@@ -180,7 +180,7 @@ export class InlineAutocompleteSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Custom local dictionary file path")
 			.setDesc(
-				"Optional path to a custom .txt or .dic wordlist in your vault (or OS path on desktop). Leave empty to use the bundled dictionary."
+				"Optional path to a custom .txt or .dic wordlist inside your vault. Leave empty to use the bundled dictionary."
 			)
 			.addText((text) =>
 				text
@@ -254,7 +254,7 @@ export class InlineAutocompleteSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 				area.inputEl.rows = 3;
-				area.inputEl.style.width = "100%";
+				area.inputEl.addClass("iac-custom-words-input");
 			});
 
 		// Snippets Section

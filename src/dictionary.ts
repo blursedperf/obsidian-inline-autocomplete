@@ -242,19 +242,6 @@ export const TECHNICAL_VOCABULARY: string[] = [
 export const BUILTIN_DICTIONARY = TECHNICAL_VOCABULARY;
 
 /**
- * Standard OS dictionary paths checked on desktop if explicitly requested.
- */
-export const SYSTEM_DICTIONARY_PATHS: string[] = [
-	"/usr/share/dict/words",
-	"/usr/dict/words",
-	"/usr/share/dict/american-english",
-	"/usr/share/dict/british-english",
-	"/usr/share/dict/cracklib-small",
-	"/usr/share/hunspell/en_US.dic",
-	"/usr/share/myspell/dicts/en_US.dic",
-];
-
-/**
  * Fast 2-character bucketed prefix index capable of searching 50,000–300,000+ words
  * in < 0.1 ms per keystroke with zero network calls and full local security.
  */

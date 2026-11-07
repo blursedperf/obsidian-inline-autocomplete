@@ -156,3 +156,7 @@
 .iac-statusbar.is-disabled {
 	color: var(--text-faint);
 }
+
+.iac-custom-words-input {
+	width: 100%;
+}

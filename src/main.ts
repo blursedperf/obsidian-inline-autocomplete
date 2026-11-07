@@ -10,7 +10,6 @@ import {
 import { EditorView } from "@codemirror/view";
 import { AutocompleteSettings, DEFAULT_SETTINGS } from "./types";
 import { CompletionEngine } from "./indexer";
-import { SYSTEM_DICTIONARY_PATHS } from "./dictionary";
 import {
 	acceptFullGhostCompletion,
 	acceptNextWordGhostCompletion,
@@ -297,34 +296,20 @@ export default class InlineAutocompletePlugin extends Plugin {
 		const customPath = this.settings.localDictionaryPath.trim();
 
 		// 1. Vault path (works cross-platform on Desktop, iOS, iPadOS, Android with zero network calls)
-		if (customPath && (await this.app.vault.adapter.exists(customPath))) {
-			try {
-				const raw = await this.app.vault.adapter.read(customPath);
-				this.engine.loadExternalDictionary(raw, `Vault (${customPath})`);
-				this.updateStatusBar();
-				return;
-			} catch {
-				// Fall through
-			}
-		}
-
-		// 2. Desktop OS filesystem check (only when user specifies a custom path outside vault)
-		if (customPath && Platform.isDesktopApp) {
-			try {
-				// eslint-disable-next-line @typescript-eslint/no-var-requires
-				const fs = require("fs") as typeof import("fs");
-				if (fs.existsSync(customPath)) {
-					const raw = await fs.promises.readFile(customPath, "utf8");
-					this.engine.loadExternalDictionary(raw, customPath);
+		if (customPath) {
+			if (await this.app.vault.adapter.exists(customPath)) {
+				try {
+					const raw = await this.app.vault.adapter.read(customPath);
+					this.engine.loadExternalDictionary(raw, `Vault (${customPath})`);
 					this.updateStatusBar();
 					return;
+				} catch {
+					// Fall through to bundled dictionary
 				}
-			} catch {
-				// Fall through
 			}
 		}
 
-		// 3. Bundled full English dictionary (~50,000 words)
+		// 2. Bundled full English dictionary (~50,000 words)
 		// Works 100% offline, native/bundled, zero network calls, zero external file dependencies
 		this.engine.loadBundledDictionary();
 		this.updateStatusBar();
