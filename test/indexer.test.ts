@@ -123,7 +123,7 @@ serendipity
 `;
 	const loadedCount = engine.loadExternalDictionary(
 		sampleDict,
-		"/usr/share/dict/words"
+		"Vault (custom-words.txt)"
 	);
 	assert.ok(loadedCount > 230); // Technical vocabulary + valid words, excluding "1a2b3c"
 	const dictCandidates = engine.query(

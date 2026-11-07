@@ -474,7 +474,7 @@ export class CompletionEngine {
 					matchedPrefix: wordPrefix,
 					ghostSuffix: adapted.slice(wordPrefix.length),
 					kind: "dictionary",
-					detail: "Custom Word",
+					detail: "Custom word",
 					score: 620 + (wordPrefix.length / w.length) * 60,
 				});
 			}
@@ -497,7 +497,7 @@ export class CompletionEngine {
 						matchedPrefix: wordPrefix,
 						ghostSuffix: adapted.slice(wordPrefix.length),
 						kind: entry.kind,
-						detail: entry.kind === "note" ? "Note Title" : "Heading",
+						detail: entry.kind === "note" ? "Note title" : "Heading",
 						score: 540 + (wordPrefix.length / text.length) * 50,
 					});
 				}
@@ -533,7 +533,7 @@ export class CompletionEngine {
 						kind: "word",
 						detail:
 							localCount > 0
-								? `Current Note (${info.count}×)`
+								? `Current note (${info.count}×)`
 								: `Vault (${info.count}×)`,
 						score: 400 + freqScore + localBoost + prefixRatio * 55,
 					});
