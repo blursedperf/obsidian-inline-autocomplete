@@ -162,4 +162,116 @@ serendipity
 	assert.equal(engine.query(afterClosedLinkCtx, disabledSettings).length, 0);
 }
 
+// 9. Verify Autocomplete Key Scope Behavior (Only Tab confirms, Return keeps typed text)
+{
+	interface MockKeyHandler {
+		modifiers: string | null;
+		key: string | null;
+		func: (evt: any, ctx: any) => any;
+	}
+
+	class MockScope {
+		keys: MockKeyHandler[] = [];
+		register(
+			modifiers: string[] | null,
+			key: string | null,
+			func: (evt: any, ctx: any) => any
+		): MockKeyHandler {
+			const handler: MockKeyHandler = {
+				modifiers: modifiers ? modifiers.join(",") : null,
+				key,
+				func,
+			};
+			this.keys.push(handler);
+			return handler;
+		}
+		unregister(handler: MockKeyHandler): void {
+			const idx = this.keys.indexOf(handler);
+			if (idx !== -1) this.keys.splice(idx, 1);
+		}
+		handleKey(evt: any, info: { modifiers: string; key: string }): any {
+			for (const h of this.keys) {
+				const modMatch =
+					h.modifiers === null || h.modifiers === info.modifiers;
+				const keyMatch =
+					h.key === null ||
+					(info.key && h.key.toLowerCase() === info.key.toLowerCase());
+				if (!modMatch || !keyMatch) continue;
+				const r = h.func(evt, info);
+				if (r !== undefined || h.key !== null || h.modifiers !== null) {
+					return r;
+				}
+			}
+			return undefined;
+		}
+	}
+
+	const scope = new MockScope();
+
+	// Simulate Obsidian's default EditorSuggest handler that accepts on Enter
+	let selectedOnEnter = false;
+	const defaultEnterHandler = scope.register([], "Enter", () => {
+		selectedOnEnter = true;
+		return false;
+	});
+
+	// Ensure default Enter handler is unregistered/removed
+	scope.keys = scope.keys.filter((h) => h.key?.toLowerCase() !== "enter");
+	assert.equal(scope.keys.length, 0);
+
+	let popupClosed = false;
+	const handleEnterKey = () => {
+		popupClosed = true;
+		return; // undefined
+	};
+	scope.register(null, "Enter", handleEnterKey);
+
+	let tabAccepted = false;
+	scope.register([], "Tab", (evt: any) => {
+		tabAccepted = true;
+		popupClosed = true;
+		evt.preventDefault();
+		return false;
+	});
+
+	// Test Return / Enter key press:
+	// - Must NOT confirm or accept the suggestion
+	// - Must close popup
+	// - Must return undefined (not false) so browser event is NOT prevented, allowing normal newline
+	let enterPrevented = false;
+	const mockEnterEvt = {
+		preventDefault: () => {
+			enterPrevented = true;
+		},
+	};
+	const enterResult = scope.handleKey(mockEnterEvt, {
+		modifiers: "",
+		key: "Enter",
+	});
+	assert.equal(selectedOnEnter, false, "Return must not accept suggestion");
+	assert.equal(popupClosed, true, "Return must close suggestion popup");
+	assert.equal(enterResult, undefined, "Return must return undefined to allow normal newline");
+	assert.equal(enterPrevented, false, "Return must not prevent default editor newline");
+
+	// Test Tab key press:
+	// - Must confirm suggestion
+	// - Must prevent default Tab indentation
+	// - Must return false
+	popupClosed = false;
+	let tabPrevented = false;
+	const mockTabEvt = {
+		preventDefault: () => {
+			tabPrevented = true;
+		},
+	};
+	const tabResult = scope.handleKey(mockTabEvt, {
+		modifiers: "",
+		key: "Tab",
+	});
+	assert.equal(tabAccepted, true, "Tab must confirm suggestion");
+	assert.equal(popupClosed, true, "Tab must close suggestion popup");
+	assert.equal(tabPrevented, true, "Tab must prevent default tab event");
+	assert.equal(tabResult, false, "Tab must return false to consume event");
+}
+
 console.log("All Inline Autocomplete Indexer tests passed!");

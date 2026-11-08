@@ -26,6 +26,7 @@ Designed for high-speed writing and knowledge management without breaking your f
 | Action | Shortcut | Description |
 | :--- | :--- | :--- |
 | **Accept Full Completion** | `Tab` | Inserts the entire suggestion (and jumps to `$CURSOR` if expanding a snippet). |
+| **Keep Typed Text & Newline** | `Return` / `Enter` | Keeps text as typed, dismisses suggestions, and performs normal newline behavior. |
 | **Accept Next Word** | `Ctrl + →` / `Cmd + →` / `Alt + →` | Inserts only the next word of a multi-word phrase or completion. |
 | **Cycle Next Suggestion** | `Alt + ]` / `Ctrl + ]` | Cycles forward through alternative completion candidates. |
 | **Cycle Previous Suggestion** | `Alt + [` / `Ctrl + [` | Cycles backward through alternative candidates. |

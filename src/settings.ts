@@ -66,7 +66,7 @@ export class InlineAutocompleteSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Popup suggestion menu")
 			.setDesc(
-				"Display a floating dropdown list of matching completions below the cursor"
+				"Display a floating dropdown list of matching completions below the cursor (Tab to confirm, Return to keep typed text)"
 			)
 			.addToggle((toggle) =>
 				toggle

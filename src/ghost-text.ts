@@ -368,6 +368,21 @@ export function createGhostTextExtension(
 				run: (view) => acceptFullGhostCompletion(view),
 			},
 			{
+				key: "Enter",
+				run: (view) => {
+					// Return keeps typed text and exhibits normal newline behavior
+					dismissActiveGhostCompletion(view);
+					return false;
+				},
+			},
+			{
+				key: "Shift-Enter",
+				run: (view) => {
+					dismissActiveGhostCompletion(view);
+					return false;
+				},
+			},
+			{
 				key: "Mod-ArrowRight",
 				run: (view) => acceptNextWordGhostCompletion(view),
 			},

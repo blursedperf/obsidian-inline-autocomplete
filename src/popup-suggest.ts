@@ -27,12 +27,41 @@ const KIND_ICONS: Record<CompletionKind, string> = {
 export class InlinePopupSuggest extends EditorSuggest<CompletionCandidate> {
 	private plugin: InlineAutocompletePlugin;
 
+	private handleEnterKey = (): void => {
+		// When Return/Enter is pressed, close the popup and do NOT confirm the suggestion.
+		// Returning undefined ensures handleKey does not return false,
+		// allowing the Return key event to proceed normally to the editor (inserting a newline).
+		this.close();
+		return;
+	};
+
+	private removeDefaultEnterHandlers(): void {
+		const scopeInternal = this.scope as unknown as {
+			keys?: Array<{ key?: string | null; func?: unknown }>;
+		};
+		if (Array.isArray(scopeInternal.keys)) {
+			// Remove any default Enter handlers registered by Obsidian's suggest component
+			// but preserve our custom Enter handler.
+			scopeInternal.keys = scopeInternal.keys.filter(
+				(handler) =>
+					handler.key?.toLowerCase() !== "enter" ||
+					handler.func === this.handleEnterKey
+			);
+		}
+	}
+
 	constructor(app: App, plugin: InlineAutocompletePlugin) {
 		super(app);
 		this.plugin = plugin;
 		this.limit = plugin.settings.maxSuggestions;
 
-		// Allow Tab to accept the highlighted suggestion when our popup is open (outside links)
+		// 1. Remove Obsidian's default Enter handler from this.scope so Enter does NOT confirm suggestions
+		this.removeDefaultEnterHandlers();
+
+		// 2. Register Return/Enter handler: closes popup immediately while letting normal Return newline occur
+		this.scope.register(null, "Enter", this.handleEnterKey);
+
+		// 3. Allow Tab to confirm the highlighted suggestion when our popup is open (outside links)
 		this.scope.register([], "Tab", (evt: KeyboardEvent) => {
 			const suggestions = (
 				this as unknown as {
@@ -52,9 +81,9 @@ export class InlinePopupSuggest extends EditorSuggest<CompletionCandidate> {
 					const item = suggestions.values[idx] ?? suggestions.values[0];
 					if (item) {
 						this.selectSuggestion(item, evt);
-						this.close();
 					}
 				}
+				this.close();
 				return false;
 			}
 			return;
@@ -66,6 +95,7 @@ export class InlinePopupSuggest extends EditorSuggest<CompletionCandidate> {
 		editor: Editor,
 		file: TFile | null
 	): EditorSuggestTriggerInfo | null {
+		this.removeDefaultEnterHandlers();
 		const { settings } = this.plugin;
 		if (!this.plugin.isAutocompleteActive() || !settings.enablePopupSuggest) {
 			this.close();
@@ -180,8 +210,10 @@ export class InlinePopupSuggest extends EditorSuggest<CompletionCandidate> {
 		candidate: CompletionCandidate,
 		_evt: MouseEvent | KeyboardEvent
 	): void {
-		if (!this.context) return;
-		const { editor, start, end } = this.context;
+		const ctx = this.context;
+		this.close();
+		if (!ctx) return;
+		const { editor, start, end } = ctx;
 
 		editor.replaceRange(candidate.insertText, start, end);
 
