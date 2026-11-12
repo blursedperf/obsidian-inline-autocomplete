@@ -4,7 +4,7 @@ import {
 	IndexStats,
 	QueryContext,
 } from "./types";
-import { BUILTIN_DICTIONARY, PrefixDictionaryIndex } from "./dictionary";
+import { PrefixDictionaryIndex } from "./dictionary";
 
 interface FileIndexEntry {
 	title: string;
@@ -113,7 +113,7 @@ export function extractQueryContext(
 	}
 
 	// Match current word prefix (allowing leading ; or / for snippet triggers)
-	const wordMatch = linePrefix.match(/(?:^|\s)([;\/]?[A-Za-z0-9_-]+)$/);
+	const wordMatch = linePrefix.match(/(?:^|\s)([;/]?[A-Za-z0-9_-]+)$/);
 	const wordPrefix = wordMatch ? wordMatch[1] : "";
 
 	const beforeWord = linePrefix.slice(
@@ -244,7 +244,7 @@ export class CompletionEngine {
 			// Strip URLs and wiki links syntax markers
 			const stripped = line
 				.replace(/https?:\/\/\S+/g, " ")
-				.replace(/[\[\]*_`~>#|]/g, " ");
+				.replace(/[[\]*_`~>#|]/g, " ");
 
 			const tokens: string[] = [];
 			const wordRegex = /[A-Za-z][A-Za-z0-9_-]{1,35}/g;
@@ -615,7 +615,7 @@ export class CompletionEngine {
 
 			const stripped = line
 				.replace(/https?:\/\/\S+/g, " ")
-				.replace(/[\[\]*_`~>#|]/g, " ");
+				.replace(/[[\]*_`~>#|]/g, " ");
 
 			const tokens: string[] = [];
 			const wordRegex = /[A-Za-z][A-Za-z0-9_-]{1,35}/g;

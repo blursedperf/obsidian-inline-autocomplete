@@ -55,14 +55,16 @@ class GhostTextWidget extends WidgetType {
 	}
 
 	toDOM(view: EditorView): HTMLElement {
-		const wrapper = document.createElement("span");
-		wrapper.className = "iac-ghost-wrapper";
-		wrapper.setAttribute("aria-hidden", "true");
+		const wrapper = createSpan({
+			cls: "iac-ghost-wrapper",
+			attr: { "aria-hidden": "true" },
+		});
 
-		const textSpan = document.createElement("span");
-		textSpan.className = "iac-ghost-text";
-		textSpan.textContent = this.suffix;
-		textSpan.title = "Tap or press Tab to accept completion";
+		const textSpan = wrapper.createSpan({
+			cls: "iac-ghost-text",
+			text: this.suffix,
+			attr: { title: "Tap or press Tab to accept completion" },
+		});
 
 		// Support tap-to-accept on iOS / iPadOS touchscreens without dismissing the virtual keyboard
 		const handleAcceptTap = (evt: Event) => {
@@ -72,13 +74,13 @@ class GhostTextWidget extends WidgetType {
 		};
 		textSpan.addEventListener("touchstart", handleAcceptTap, { passive: false });
 		textSpan.addEventListener("mousedown", handleAcceptTap);
-		wrapper.appendChild(textSpan);
 
 		if (this.total > 1) {
-			const badge = document.createElement("span");
-			badge.className = "iac-ghost-counter";
-			badge.textContent = `${this.index + 1}/${this.total} ↻`;
-			badge.title = "Tap or press Alt+] to cycle suggestions";
+			const badge = wrapper.createSpan({
+				cls: "iac-ghost-counter",
+				text: `${this.index + 1}/${this.total} ↻`,
+				attr: { title: "Tap or press Alt+] to cycle suggestions" },
+			});
 
 			// Support tap-to-cycle on iOS / iPadOS touchscreens
 			const handleCycleTap = (evt: Event) => {
@@ -88,7 +90,6 @@ class GhostTextWidget extends WidgetType {
 			};
 			badge.addEventListener("touchstart", handleCycleTap, { passive: false });
 			badge.addEventListener("mousedown", handleCycleTap);
-			wrapper.appendChild(badge);
 		}
 
 		return wrapper;

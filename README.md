@@ -60,6 +60,7 @@ Inline Autocomplete unifies multiple local sources into a ranked suggestion pipe
 - **Zero Network Activity**: Inline Autocomplete contains **no network requests**, telemetry, tracking, analytics, or external API calls.
 - **No Remote Dependencies**: The English dictionary and vocabulary are bundled directly into the plugin. No secondary downloads or cloud connections are required.
 - **Vault Sandbox**: All operations are performed locally in memory and through Obsidian's official `app.vault` APIs.
+- **Vault Access**: To suggest your own words, phrases, note titles and headings, the plugin lists and reads the Markdown files in your vault (`vault.getMarkdownFiles()`). The resulting index is kept in memory only and is never written to disk or sent anywhere. If you turn off all three vault sources under **Settings → Completion sources** (vault words, phrases, and note titles/headings), the plugin stops reading your notes entirely.
 
 ---
 

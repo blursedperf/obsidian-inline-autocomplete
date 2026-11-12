@@ -52,19 +52,14 @@ export default class InlineAutocompletePlugin extends Plugin {
 				"title",
 				"Click to toggle inline autocomplete · Right-click to rebuild vault index"
 			);
-			this.statusBarEl.addEventListener("click", async () => {
-				this.settings.enabled = !this.settings.enabled;
-				await this.saveSettings();
-				new Notice(
-					`Inline autocomplete ${
-						this.settings.enabled ? "enabled" : "disabled"
-					}`
-				);
+			this.statusBarEl.addEventListener("click", () => {
+				void this.toggleEnabled();
 			});
-			this.statusBarEl.addEventListener("contextmenu", async (evt) => {
+			this.statusBarEl.addEventListener("contextmenu", (evt) => {
 				evt.preventDefault();
-				await this.rebuildVaultIndex();
-				new Notice("Vault autocomplete index rebuilt.");
+				void this.rebuildVaultIndex().then(() =>
+					new Notice("Vault autocomplete index rebuilt.")
+				);
 			});
 			this.updateStatusBar();
 		}
@@ -116,18 +111,10 @@ export default class InlineAutocompletePlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: "toggle-inline-autocomplete",
-			name: "Toggle inline autocomplete (on/off)",
+			id: "toggle-enabled",
+			name: "Toggle autocomplete on/off",
 			icon: "sparkles",
-			callback: async () => {
-				this.settings.enabled = !this.settings.enabled;
-				await this.saveSettings();
-				new Notice(
-					`Inline autocomplete ${
-						this.settings.enabled ? "enabled" : "disabled"
-					}`
-				);
-			},
+			callback: () => this.toggleEnabled(),
 		});
 
 		this.addCommand({
@@ -181,7 +168,7 @@ export default class InlineAutocompletePlugin extends Plugin {
 				}
 				if (!this.settings.customWords.includes(selected)) {
 					this.settings.customWords.push(selected);
-					this.saveSettings();
+					void this.saveSettings();
 				}
 				new Notice(`Added "${selected}" to custom autocomplete dictionary.`);
 				return true;
@@ -214,7 +201,7 @@ export default class InlineAutocompletePlugin extends Plugin {
 
 		const debouncedIndexFile = debounce(
 			async (file: TFile) => {
-				if (!this.isAutocompleteActive()) {
+				if (!this.isAutocompleteActive() || !this.isVaultIndexingEnabled()) {
 					return;
 				}
 				try {
@@ -315,7 +302,21 @@ export default class InlineAutocompletePlugin extends Plugin {
 		this.updateStatusBar();
 	}
 
+	/** True when at least one completion source needs to read vault notes. */
+	public isVaultIndexingEnabled(): boolean {
+		return (
+			this.settings.indexVaultWords ||
+			this.settings.indexNgramPhrases ||
+			this.settings.indexNoteTitlesAndHeadings
+		);
+	}
+
 	public async rebuildVaultIndex(): Promise<void> {
+		if (!this.isVaultIndexingEnabled()) {
+			this.engine.indexAllFiles([]);
+			this.updateStatusBar();
+			return;
+		}
 		const markdownFiles = this.app.vault.getMarkdownFiles();
 		const batch: Array<{ path: string; title: string; content: string }> = [];
 
@@ -360,6 +361,14 @@ export default class InlineAutocompletePlugin extends Plugin {
 		if (!Array.isArray(this.settings.customWords)) {
 			this.settings.customWords = [];
 		}
+	}
+
+	public async toggleEnabled(): Promise<void> {
+		this.settings.enabled = !this.settings.enabled;
+		await this.saveSettings();
+		new Notice(
+			`Inline autocomplete ${this.settings.enabled ? "enabled" : "disabled"}`
+		);
 	}
 
 	public async saveSettings(): Promise<void> {

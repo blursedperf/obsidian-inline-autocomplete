@@ -75,29 +75,31 @@ export class CreateSnippetModal extends Modal {
 			text: "Save snippet",
 			cls: "mod-cta",
 		});
-		saveBtn.addEventListener("click", async () => {
-			if (!this.trigger || !this.expansion) {
-				new Notice("Please provide both a trigger and expansion text.");
-				return;
-			}
-			const snippet: CustomSnippet = {
-				trigger: this.trigger,
-				expansion: this.expansion,
-				description: this.description || "Custom Snippet",
-			};
-			const existingIdx = this.plugin.settings.snippets.findIndex(
-				(s) => s.trigger.toLowerCase() === this.trigger.toLowerCase()
-			);
-			if (existingIdx >= 0) {
-				this.plugin.settings.snippets[existingIdx] = snippet;
-			} else {
-				this.plugin.settings.snippets.push(snippet);
-			}
-			await this.plugin.saveSettings();
-			this.onSaved?.();
-			new Notice(`Snippet "${this.trigger}" saved.`);
-			this.close();
-		});
+		saveBtn.addEventListener("click", () => void this.save());
+	}
+
+	private async save(): Promise<void> {
+		if (!this.trigger || !this.expansion) {
+			new Notice("Please provide both a trigger and expansion text.");
+			return;
+		}
+		const snippet: CustomSnippet = {
+			trigger: this.trigger,
+			expansion: this.expansion,
+			description: this.description || "Custom Snippet",
+		};
+		const existingIdx = this.plugin.settings.snippets.findIndex(
+			(s) => s.trigger.toLowerCase() === this.trigger.toLowerCase()
+		);
+		if (existingIdx >= 0) {
+			this.plugin.settings.snippets[existingIdx] = snippet;
+		} else {
+			this.plugin.settings.snippets.push(snippet);
+		}
+		await this.plugin.saveSettings();
+		this.onSaved?.();
+		new Notice(`Snippet "${this.trigger}" saved.`);
+		this.close();
 	}
 
 	onClose(): void {

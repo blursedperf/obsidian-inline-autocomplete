@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-inline-autocomplete",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"description": "Autocomplete words, phrases, note titles, and snippets with fast, offline inline ghost text and popup suggestions.",
 	"main": "main.js",
 	"scripts": {
@@ -28,9 +28,8 @@
 		"@codemirror/state": "^6.4.1",
 		"@codemirror/view": "^6.26.3",
 		"@types/node": "^20.11.0",
-		"builtin-modules": "^3.3.0",
 		"esbuild": "0.21.5",
-		"obsidian": "^1.5.7",
+		"obsidian": "^1.13.0",
 		"tslib": "2.6.2",
 		"typescript": "5.4.5"
 	}
