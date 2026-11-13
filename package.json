@@ -1,12 +1,12 @@
 {
 	"name": "obsidian-inline-autocomplete",
-	"version": "1.0.4",
+	"version": "1.0.5",
 	"description": "Autocomplete words, phrases, note titles, and snippets with fast, offline inline ghost text and popup suggestions.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-		"test": "esbuild test/indexer.test.ts --bundle --platform=node --format=cjs --loader:.txt=text | node"
+		"test": "esbuild test/indexer.test.ts --bundle --platform=node --format=cjs --loader:.txt=text | node && node scripts/offline-audit.mjs"
 	},
 	"keywords": [
 		"obsidian",

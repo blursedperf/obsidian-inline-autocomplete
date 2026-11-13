@@ -58,6 +58,7 @@ Inline Autocomplete unifies multiple local sources into a ranked suggestion pipe
 ## Security & Privacy
 
 - **Zero Network Activity**: Inline Autocomplete contains **no network requests**, telemetry, tracking, analytics, or external API calls.
+- **Offline audit**: Every test run checks the source, built bundle and styles with `scripts/offline-audit.mjs`, which fails on any network API (`fetch`, `XMLHttpRequest`, WebSocket, `requestUrl`, workers, dynamic `import()`, ...), dynamic code (`eval`, `new Function`), raw HTML injection, or remote CSS (`@import`, non-`data:` `url()`).
 - **No Remote Dependencies**: The English dictionary and vocabulary are bundled directly into the plugin. No secondary downloads or cloud connections are required.
 - **Vault Sandbox**: All operations are performed locally in memory and through Obsidian's official `app.vault` APIs.
 - **Vault Access**: To suggest your own words, phrases, note titles and headings, the plugin lists and reads the Markdown files in your vault (`vault.getMarkdownFiles()`). The resulting index is kept in memory only and is never written to disk or sent anywhere. If you turn off all three vault sources under **Settings → Completion sources** (vault words, phrases, and note titles/headings), the plugin stops reading your notes entirely.

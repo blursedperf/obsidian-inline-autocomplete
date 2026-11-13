@@ -318,4 +318,43 @@ Under s 18 Australian Consumer Law, misleading conduct. Lord Atkin's speech.`
 	assert.ok(words.includes("Atkin"));
 }
 
+// Incremental index updates always match a full rebuild
+{
+	const versions: Record<string, string[]> = {
+		"Torts.md": [
+			"# Negligence\nDonoghue v Stevenson established the neighbour principle.",
+			"# Negligence\n## Duty of care\nDonoghue v Stevenson and the duty of care.",
+			"",
+		],
+		"Contract.md": ["# Offer\nAn offer must be communicated.", "# Offer and acceptance\nOffer acceptance consideration."],
+		"Negligence.md": ["# Torts\nThe neighbour principle again.", "Duty of care. Breach of duty."],
+	};
+	const live = new CompletionEngine();
+	const current: Record<string, string> = {};
+	const titleOf = (path: string) => path.replace(/\.md$/, "");
+	const check = () => {
+		const fresh = new CompletionEngine();
+		fresh.indexAllFiles(Object.entries(current).map(([path, content]) => ({ path, title: titleOf(path), content })));
+		assert.deepEqual(live.getIndexSnapshot(), fresh.getIndexSnapshot());
+	};
+	for (let round = 0; round < 3; round++) {
+		for (const [path, list] of Object.entries(versions)) {
+			const content = list[round % list.length];
+			current[path] = content;
+			live.indexFile(path, titleOf(path), content);
+			check();
+		}
+	}
+	live.removeFile("Torts.md");
+	delete current["Torts.md"];
+	check();
+	// "Torts" was a note title and a heading; with the note gone it is still a heading
+	assert.deepEqual(
+		live.getIndexSnapshot().titles.find(([key]) => key === "torts"),
+		["torts", "heading"]
+	);
+	live.clearFiles();
+	assert.deepEqual(live.getIndexSnapshot(), { words: [], phrases: [], titles: [] });
+}
+
 console.log("All Inline Autocomplete Indexer tests passed!");

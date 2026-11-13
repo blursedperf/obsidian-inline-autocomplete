@@ -232,6 +232,50 @@ function indexLineTokens(
 	}
 }
 
+/** Parse one note into its title, headings, vocabulary and phrases. */
+function buildFileEntry(title: string, content: string): FileIndexEntry {
+	const lines = content.split(/\r?\n/);
+	const headings: string[] = [];
+	const wordCounts = new Map<string, { canonical: string; count: number }>();
+	const phrasesByFirstWord = new Map<string, Map<string, number>>();
+
+	let startLine = 0;
+	if (lines.length > 0 && lines[0].trim() === "---") {
+		for (let i = 1; i < lines.length; i++) {
+			if (lines[i].trim() === "---" || lines[i].trim() === "...") {
+				startLine = i + 1;
+				break;
+			}
+		}
+	}
+
+	let inFence = false;
+	for (let i = startLine; i < lines.length; i++) {
+		const line = lines[i];
+		const trimmed = line.trim();
+		if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
+			inFence = !inFence;
+			continue;
+		}
+		if (inFence) continue;
+
+		const headingMatch = trimmed.match(/^#{1,6}\s+(.+)$/);
+		if (headingMatch) {
+			const hText = headingMatch[1]
+				.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+				.replace(/[#*_`~]/g, "")
+				.trim();
+			if (hText.length >= 3) {
+				headings.push(hText);
+			}
+		}
+
+		indexLineTokens(line, wordCounts, phrasesByFirstWord);
+	}
+
+	return { title, headings, wordCounts, phrasesByFirstWord };
+}
+
 export class CompletionEngine {
 	private fileEntries: Map<string, FileIndexEntry> = new Map();
 	private globalWords: Map<string, { canonical: string; count: number }> =
@@ -239,6 +283,8 @@ export class CompletionEngine {
 	private globalPhrases: Map<string, Map<string, number>> = new Map();
 	private globalTitlesAndHeadings: Map<string, { text: string; kind: "note" | "heading" }> =
 		new Map();
+	/** How many notes use a string as their title, and how many headings use it. */
+	private titleRefs: Map<string, { notes: number; headings: number }> = new Map();
 	public dictionaryIndex: PrefixDictionaryIndex = new PrefixDictionaryIndex();
 
 	public loadExternalDictionary(rawText: string, sourceLabel: string): number {
@@ -258,86 +304,64 @@ export class CompletionEngine {
 		this.globalWords.clear();
 		this.globalPhrases.clear();
 		this.globalTitlesAndHeadings.clear();
+		this.titleRefs.clear();
 		this.dictionaryIndex.clear();
 	}
 
 	/**
-	 * Index or re-index a single Markdown file.
+	 * Index or re-index a single Markdown file. Only this file's contribution to the vault-wide
+	 * aggregates is updated, so the cost is proportional to the file, not the vault.
 	 */
 	public indexFile(filePath: string, title: string, content: string): void {
-		const lines = content.split(/\r?\n/);
-		const headings: string[] = [];
-		const wordCounts = new Map<string, { canonical: string; count: number }>();
-		const phrasesByFirstWord = new Map<string, Map<string, number>>();
-
-		let startLine = 0;
-		if (lines.length > 0 && lines[0].trim() === "---") {
-			for (let i = 1; i < lines.length; i++) {
-				if (lines[i].trim() === "---" || lines[i].trim() === "...") {
-					startLine = i + 1;
-					break;
-				}
-			}
-		}
-
-		let inFence = false;
-		const cleanLines: string[] = [];
-
-		for (let i = startLine; i < lines.length; i++) {
-			const line = lines[i];
-			const trimmed = line.trim();
-			if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
-				inFence = !inFence;
-				continue;
-			}
-			if (inFence) continue;
-
-			const headingMatch = trimmed.match(/^#{1,6}\s+(.+)$/);
-			if (headingMatch) {
-				const hText = headingMatch[1]
-					.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-					.replace(/[#*_`~]/g, "")
-					.trim();
-				if (hText.length >= 3) {
-					headings.push(hText);
-				}
-			}
-
-			cleanLines.push(line);
-		}
-
-		// Tokenize words and n-gram phrases per line
-		for (const line of cleanLines) {
-			indexLineTokens(line, wordCounts, phrasesByFirstWord);
-		}
-
-		this.fileEntries.set(filePath, {
-			title,
-			headings,
-			wordCounts,
-			phrasesByFirstWord,
-		});
-
-		this.rebuildGlobalAggregates();
+		const previous = this.fileEntries.get(filePath);
+		if (previous) this.removeEntry(previous);
+		const entry = buildFileEntry(title, content);
+		this.fileEntries.set(filePath, entry);
+		this.addEntry(entry);
 	}
 
 	/**
-	 * Batch-index multiple files and rebuild aggregates once at the end.
+	 * Replace the whole index with these files.
 	 */
 	public indexAllFiles(
 		files: Array<{ path: string; title: string; content: string }>
 	): void {
-		this.fileEntries.clear();
+		this.clearFiles();
 		for (const f of files) {
-			this.indexFileWithoutRebuild(f.path, f.title, f.content);
+			this.indexFile(f.path, f.title, f.content);
 		}
-		this.rebuildGlobalAggregates();
+	}
+
+	/** Drop every indexed file (the dictionary is kept). */
+	public clearFiles(): void {
+		this.fileEntries.clear();
+		this.globalWords.clear();
+		this.globalPhrases.clear();
+		this.globalTitlesAndHeadings.clear();
+		this.titleRefs.clear();
 	}
 
 	public removeFile(filePath: string): void {
-		if (this.fileEntries.delete(filePath)) {
-			this.rebuildGlobalAggregates();
+		const entry = this.fileEntries.get(filePath);
+		if (!entry) return;
+		this.fileEntries.delete(filePath);
+		this.removeEntry(entry);
+	}
+
+	/** Sorted view of the vault-wide aggregates, for checking incremental updates. */
+	public getIndexSnapshot(): {
+		words: [string, number][];
+		phrases: [string, number][];
+		titles: [string, string][];
+	} {
+		const words = [...this.globalWords].map(([w, info]): [string, number] => [w, info.count]);
+		const phrases: [string, number][] = [];
+		for (const map of this.globalPhrases.values()) {
+			for (const [phrase, count] of map) phrases.push([phrase, count]);
 		}
+		const titles = [...this.globalTitlesAndHeadings].map(([k, v]): [string, string] => [k, v.kind]);
+		const byKey = (x: [string, unknown], y: [string, unknown]) => (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0);
+		return { words: words.sort(byKey), phrases: phrases.sort(byKey), titles: titles.sort(byKey) };
 	}
 
 	public getStats(): IndexStats {
@@ -591,106 +615,84 @@ export class CompletionEngine {
 			.slice(0, settings.maxSuggestions);
 	}
 
-	private indexFileWithoutRebuild(
-		filePath: string,
-		title: string,
-		content: string
-	): void {
-		// Re-use indexFile logic without calling rebuildGlobalAggregates until the batch finishes
-		const lines = content.split(/\r?\n/);
-		const headings: string[] = [];
-		const wordCounts = new Map<string, { canonical: string; count: number }>();
-		const phrasesByFirstWord = new Map<string, Map<string, number>>();
-
-		let startLine = 0;
-		if (lines.length > 0 && lines[0].trim() === "---") {
-			for (let i = 1; i < lines.length; i++) {
-				if (lines[i].trim() === "---" || lines[i].trim() === "...") {
-					startLine = i + 1;
-					break;
-				}
+	/** Add one file's words, phrases, title and headings to the vault-wide aggregates. */
+	private addEntry(entry: FileIndexEntry): void {
+		const refs = (key: string) => {
+			let r = this.titleRefs.get(key);
+			if (!r) {
+				r = { notes: 0, headings: 0 };
+				this.titleRefs.set(key, r);
+			}
+			return r;
+		};
+		if (entry.title && entry.title.length >= 3) {
+			const key = entry.title.toLowerCase();
+			refs(key).notes++;
+			this.globalTitlesAndHeadings.set(key, { text: entry.title, kind: "note" });
+		}
+		for (const h of entry.headings) {
+			const key = h.toLowerCase();
+			refs(key).headings++;
+			if (!this.globalTitlesAndHeadings.has(key)) {
+				this.globalTitlesAndHeadings.set(key, { text: h, kind: "heading" });
 			}
 		}
 
-		let inFence = false;
-		for (let i = startLine; i < lines.length; i++) {
-			const line = lines[i];
-			const trimmed = line.trim();
-			if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
-				inFence = !inFence;
-				continue;
+		for (const [lower, info] of entry.wordCounts) {
+			const existing = this.globalWords.get(lower);
+			if (existing) {
+				existing.count += info.count;
+				if (info.canonical === lower) existing.canonical = info.canonical;
+			} else {
+				this.globalWords.set(lower, { canonical: info.canonical, count: info.count });
 			}
-			if (inFence) continue;
-
-			const headingMatch = trimmed.match(/^#{1,6}\s+(.+)$/);
-			if (headingMatch) {
-				const hText = headingMatch[1]
-					.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-					.replace(/[#*_`~]/g, "")
-					.trim();
-				if (hText.length >= 3) {
-					headings.push(hText);
-				}
-			}
-
-			indexLineTokens(line, wordCounts, phrasesByFirstWord);
 		}
 
-		this.fileEntries.set(filePath, {
-			title,
-			headings,
-			wordCounts,
-			phrasesByFirstWord,
-		});
+		for (const [firstWord, phraseMap] of entry.phrasesByFirstWord) {
+			let globalMap = this.globalPhrases.get(firstWord);
+			if (!globalMap) {
+				globalMap = new Map();
+				this.globalPhrases.set(firstWord, globalMap);
+			}
+			for (const [phrase, count] of phraseMap) {
+				globalMap.set(phrase, (globalMap.get(phrase) ?? 0) + count);
+			}
+		}
 	}
 
-	private rebuildGlobalAggregates(): void {
-		this.globalWords.clear();
-		this.globalPhrases.clear();
-		this.globalTitlesAndHeadings.clear();
+	/** Subtract one file's contribution from the vault-wide aggregates. */
+	private removeEntry(entry: FileIndexEntry): void {
+		const release = (key: string, kind: "notes" | "headings") => {
+			const r = this.titleRefs.get(key);
+			if (!r) return;
+			r[kind] = Math.max(0, r[kind] - 1);
+			if (r.notes === 0 && r.headings === 0) {
+				this.titleRefs.delete(key);
+				this.globalTitlesAndHeadings.delete(key);
+			} else if (r.notes === 0) {
+				const current = this.globalTitlesAndHeadings.get(key);
+				if (current) current.kind = "heading";
+			}
+		};
+		if (entry.title && entry.title.length >= 3) release(entry.title.toLowerCase(), "notes");
+		for (const h of entry.headings) release(h.toLowerCase(), "headings");
 
-		for (const [, entry] of this.fileEntries) {
-			if (entry.title && entry.title.length >= 3) {
-				this.globalTitlesAndHeadings.set(entry.title.toLowerCase(), {
-					text: entry.title,
-					kind: "note",
-				});
-			}
-			for (const h of entry.headings) {
-				const hLower = h.toLowerCase();
-				if (!this.globalTitlesAndHeadings.has(hLower)) {
-					this.globalTitlesAndHeadings.set(hLower, {
-						text: h,
-						kind: "heading",
-					});
-				}
-			}
+		for (const [lower, info] of entry.wordCounts) {
+			const existing = this.globalWords.get(lower);
+			if (!existing) continue;
+			existing.count -= info.count;
+			if (existing.count <= 0) this.globalWords.delete(lower);
+		}
 
-			for (const [lower, info] of entry.wordCounts) {
-				const existing = this.globalWords.get(lower);
-				if (existing) {
-					existing.count += info.count;
-					if (info.canonical === lower) {
-						existing.canonical = info.canonical;
-					}
-				} else {
-					this.globalWords.set(lower, {
-						canonical: info.canonical,
-						count: info.count,
-					});
-				}
+		for (const [firstWord, phraseMap] of entry.phrasesByFirstWord) {
+			const globalMap = this.globalPhrases.get(firstWord);
+			if (!globalMap) continue;
+			for (const [phrase, count] of phraseMap) {
+				const next = (globalMap.get(phrase) ?? 0) - count;
+				if (next > 0) globalMap.set(phrase, next);
+				else globalMap.delete(phrase);
 			}
-
-			for (const [firstWord, phraseMap] of entry.phrasesByFirstWord) {
-				let globalMap = this.globalPhrases.get(firstWord);
-				if (!globalMap) {
-					globalMap = new Map();
-					this.globalPhrases.set(firstWord, globalMap);
-				}
-				for (const [phrase, count] of phraseMap) {
-					globalMap.set(phrase, (globalMap.get(phrase) ?? 0) + count);
-				}
-			}
+			if (globalMap.size === 0) this.globalPhrases.delete(firstWord);
 		}
 	}
 }

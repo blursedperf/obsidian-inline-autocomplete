@@ -199,22 +199,12 @@ export default class InlineAutocompletePlugin extends Plugin {
 			await this.rebuildVaultIndex();
 		});
 
-		const debouncedIndexFile = debounce(
-			async (file: TFile) => {
-				if (!this.isAutocompleteActive() || !this.isVaultIndexingEnabled()) {
-					return;
-				}
-				try {
-					const content = await this.app.vault.cachedRead(file);
-					this.engine.indexFile(file.path, file.basename, content);
-					this.updateStatusBar();
-				} catch {
-					// Ignore unreadable files
-				}
-			},
-			600,
-			true
-		);
+		// Every changed note is queued, so several notes changing together (sync, link updates after a
+		// rename) are all re-indexed once edits settle, not just the last one.
+		const debouncedIndexFile = (file: TFile) => {
+			this.pendingPaths.add(file.path);
+			this.flushPendingFiles();
+		};
 
 		this.registerEvent(
 			this.app.vault.on("modify", (file) => {
@@ -236,6 +226,7 @@ export default class InlineAutocompletePlugin extends Plugin {
 					if (!this.isAutocompleteActive()) {
 						return;
 					}
+					this.pendingPaths.delete(file.path);
 					this.engine.removeFile(file.path);
 					this.updateStatusBar();
 				}
@@ -247,6 +238,7 @@ export default class InlineAutocompletePlugin extends Plugin {
 					if (!this.isAutocompleteActive()) {
 						return;
 					}
+					this.pendingPaths.delete(oldPath);
 					this.engine.removeFile(oldPath);
 					debouncedIndexFile(file);
 				}
@@ -255,6 +247,8 @@ export default class InlineAutocompletePlugin extends Plugin {
 	}
 
 	onunload(): void {
+		this.flushPendingFiles.cancel();
+		this.rebuildGeneration++;
 		// Clear any active ghost completions across visible editors
 		this.app.workspace.iterateAllLeaves((leaf) => {
 			if (leaf.view instanceof MarkdownView) {
@@ -311,29 +305,57 @@ export default class InlineAutocompletePlugin extends Plugin {
 		);
 	}
 
+	/** Notes waiting to be re-indexed after edits settle. */
+	private pendingPaths = new Set<string>();
+	/** Bumped by each full rebuild so an older rebuild still in progress stops. */
+	private rebuildGeneration = 0;
+
+	private flushPendingFiles = debounce(
+		async () => {
+			const paths = [...this.pendingPaths];
+			this.pendingPaths.clear();
+			if (!this.isAutocompleteActive() || !this.isVaultIndexingEnabled()) {
+				return;
+			}
+			for (const path of paths) {
+				const file = this.app.vault.getFileByPath(path);
+				if (!file || file.extension !== "md") continue;
+				try {
+					const content = await this.app.vault.cachedRead(file);
+					this.engine.indexFile(file.path, file.basename, content);
+				} catch {
+					// Ignore unreadable files
+				}
+			}
+			this.updateStatusBar();
+		},
+		600,
+		true
+	);
+
+	/**
+	 * Re-index the whole vault. Notes are read and indexed one at a time, so only one note's text
+	 * is held in memory at once.
+	 */
 	public async rebuildVaultIndex(): Promise<void> {
+		const generation = ++this.rebuildGeneration;
+		this.engine.clearFiles();
+		this.pendingPaths.clear();
 		if (!this.isVaultIndexingEnabled()) {
-			this.engine.indexAllFiles([]);
 			this.updateStatusBar();
 			return;
 		}
-		const markdownFiles = this.app.vault.getMarkdownFiles();
-		const batch: Array<{ path: string; title: string; content: string }> = [];
 
-		for (const file of markdownFiles) {
+		for (const file of this.app.vault.getMarkdownFiles()) {
 			try {
 				const content = await this.app.vault.cachedRead(file);
-				batch.push({
-					path: file.path,
-					title: file.basename,
-					content,
-				});
+				if (generation !== this.rebuildGeneration) return;
+				this.engine.indexFile(file.path, file.basename, content);
 			} catch {
 				// Skip unreadable files
 			}
 		}
 
-		this.engine.indexAllFiles(batch);
 		this.updateStatusBar();
 	}
 
