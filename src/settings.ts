@@ -69,6 +69,7 @@ export class InlineAutocompleteSettingTab extends PluginSettingTab {
 		return [
 			{
 				type: "group",
+				heading: "General",
 				items: [
 					{
 						name: "Enable autocomplete",

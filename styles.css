@@ -71,10 +71,18 @@
 }
 
 .iac-suggest-icon {
-	font-size: 0.88rem;
+	--icon-size: var(--icon-s, 16px);
+	--icon-stroke: var(--icon-s-stroke-width, 2px);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	flex-shrink: 0;
 	width: 18px;
-	text-align: center;
+	color: var(--text-muted);
+}
+
+.suggestion-item.is-selected .iac-suggest-icon {
+	color: var(--text-normal);
 }
 
 .iac-suggest-label {

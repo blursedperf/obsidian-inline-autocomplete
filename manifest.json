@@ -1,7 +1,7 @@
 {
 	"id": "inline-autocomplete",
 	"name": "Inline Autocomplete",
-	"version": "1.0.5",
+	"version": "1.0.6",
 	"minAppVersion": "1.13.0",
 	"description": "Autocomplete words, phrases, note titles, and snippets with fast, offline inline ghost text and popup suggestions.",
 	"author": "blursedperf",

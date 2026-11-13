@@ -6,6 +6,7 @@ import {
 	EditorSuggestContext,
 	EditorSuggestTriggerInfo,
 	TFile,
+	setIcon,
 } from "obsidian";
 import { CompletionCandidate, CompletionKind } from "./types";
 import {
@@ -15,13 +16,15 @@ import {
 } from "./indexer";
 import type InlineAutocompletePlugin from "./main";
 
+/** Obsidian (Lucide) icons per completion source: they follow the theme's icon colour and size,
+ * where emoji rendered in their own colours and at platform-dependent sizes. */
 const KIND_ICONS: Record<CompletionKind, string> = {
-	snippet: "⚡",
-	phrase: "💬",
-	note: "📄",
-	heading: "📑",
-	word: "🔤",
-	dictionary: "📘",
+	snippet: "zap",
+	phrase: "text-quote",
+	note: "file-text",
+	heading: "heading",
+	word: "whole-word",
+	dictionary: "book-open",
 };
 
 export class InlinePopupSuggest extends EditorSuggest<CompletionCandidate> {
@@ -175,10 +178,8 @@ export class InlinePopupSuggest extends EditorSuggest<CompletionCandidate> {
 		el.addClass("iac-suggest-item");
 
 		const left = el.createDiv({ cls: "iac-suggest-left" });
-		left.createSpan({
-			cls: `iac-suggest-icon iac-kind-${candidate.kind}`,
-			text: KIND_ICONS[candidate.kind],
-		});
+		const iconEl = left.createSpan({ cls: `iac-suggest-icon iac-kind-${candidate.kind}` });
+		setIcon(iconEl, KIND_ICONS[candidate.kind]);
 
 		const labelEl = left.createSpan({ cls: "iac-suggest-label" });
 		const prefixLen = candidate.matchedPrefix.length;
