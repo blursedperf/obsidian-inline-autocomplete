@@ -165,6 +165,73 @@ export function getDocumentCursorContext(
 	return { inFrontmatter, inCodeBlock };
 }
 
+/** Characters that end a phrase: n-grams never span punctuation, brackets or link and markup syntax. */
+const PHRASE_BREAK_REGEX = /[^A-Za-z0-9'\u2019\s-]+/;
+/** A token: letters and digits, with inner hyphens or apostrophes ("well-known", "Atkin's"). */
+const TOKEN_REGEX = /[A-Za-z0-9]+(?:[-'\u2019][A-Za-z0-9]+)*/g;
+const VOCAB_WORD_REGEX = /^[A-Za-z][A-Za-z0-9-]*$/;
+
+/**
+ * Split a line into phrase runs of tokens. Short tokens such as "v", "R" and "s" and numbers stay in
+ * the run so case names ("Donoghue v Stevenson", "R v Smith") are learned as written, and a run ends
+ * at punctuation so dropped text never joins unrelated words into a false phrase.
+ */
+export function tokenizePhraseRuns(line: string): string[][] {
+	const stripped = line
+		.replace(/https?:\/\/\S+/g, " | ")
+		.replace(/[*_`~]/g, " ");
+	const runs: string[][] = [];
+	for (const segment of stripped.split(PHRASE_BREAK_REGEX)) {
+		const tokens = segment.match(TOKEN_REGEX);
+		if (tokens && tokens.length > 0) runs.push(tokens);
+	}
+	return runs;
+}
+
+/** Count a line's vocabulary words and its 2- and 3-word phrases into a file's index maps. */
+function indexLineTokens(
+	line: string,
+	wordCounts: Map<string, { canonical: string; count: number }>,
+	phrasesByFirstWord: Map<string, Map<string, number>>
+): void {
+	for (const tokens of tokenizePhraseRuns(line)) {
+		for (const token of tokens) {
+			// Vocabulary words: 4-36 letters, possessive suffix dropped ("Atkin's" -> "Atkin")
+			const word = token.split(/['\u2019]/)[0];
+			if (word.length < 4 || word.length > 36 || !VOCAB_WORD_REGEX.test(word)) continue;
+			const lower = word.toLowerCase();
+			const existing = wordCounts.get(lower);
+			if (existing) {
+				existing.count += 1;
+				// Prefer lowercase canonical form if available
+				if (word === lower) existing.canonical = word;
+			} else {
+				wordCounts.set(lower, { canonical: word, count: 1 });
+			}
+		}
+
+		// 2-word phrases need a meaningful second word; 3-word phrases may pass through a
+		// short middle token ("Donoghue v Stevenson") as long as the last word is meaningful.
+		for (let idx = 0; idx < tokens.length - 1; idx++) {
+			const w1 = tokens[idx];
+			const w2 = tokens[idx + 1];
+			const w3 = tokens[idx + 2];
+			const bigram = w2.length >= 3 ? `${w1} ${w2}` : null;
+			const trigram = w3 !== undefined && w3.length >= 3 ? `${w1} ${w2} ${w3}` : null;
+			if (!bigram && !trigram) continue;
+
+			const firstKey = w1.toLowerCase();
+			let phraseMap = phrasesByFirstWord.get(firstKey);
+			if (!phraseMap) {
+				phraseMap = new Map();
+				phrasesByFirstWord.set(firstKey, phraseMap);
+			}
+			if (bigram) phraseMap.set(bigram, (phraseMap.get(bigram) ?? 0) + 1);
+			if (trigram) phraseMap.set(trigram, (phraseMap.get(trigram) ?? 0) + 1);
+		}
+	}
+}
+
 export class CompletionEngine {
 	private fileEntries: Map<string, FileIndexEntry> = new Map();
 	private globalWords: Map<string, { canonical: string; count: number }> =
@@ -241,54 +308,7 @@ export class CompletionEngine {
 
 		// Tokenize words and n-gram phrases per line
 		for (const line of cleanLines) {
-			// Strip URLs and wiki links syntax markers
-			const stripped = line
-				.replace(/https?:\/\/\S+/g, " ")
-				.replace(/[[\]*_`~>#|]/g, " ");
-
-			const tokens: string[] = [];
-			const wordRegex = /[A-Za-z][A-Za-z0-9_-]{1,35}/g;
-			let match: RegExpExecArray | null;
-			while ((match = wordRegex.exec(stripped)) !== null) {
-				const word = match[0];
-				tokens.push(word);
-
-				if (word.length >= 4) {
-					const lower = word.toLowerCase();
-					const existing = wordCounts.get(lower);
-					if (existing) {
-						existing.count += 1;
-						// Prefer lowercase canonical form if available
-						if (word === lower) {
-							existing.canonical = word;
-						}
-					} else {
-						wordCounts.set(lower, { canonical: word, count: 1 });
-					}
-				}
-			}
-
-			// Extract 2-word and 3-word phrases
-			for (let idx = 0; idx < tokens.length - 1; idx++) {
-				const w1 = tokens[idx];
-				const w2 = tokens[idx + 1];
-				if (w1.length < 2 || w2.length < 3) continue;
-
-				const firstKey = w1.toLowerCase();
-				let phraseMap = phrasesByFirstWord.get(firstKey);
-				if (!phraseMap) {
-					phraseMap = new Map();
-					phrasesByFirstWord.set(firstKey, phraseMap);
-				}
-
-				const bigram = `${w1} ${w2}`;
-				phraseMap.set(bigram, (phraseMap.get(bigram) ?? 0) + 1);
-
-				if (idx + 2 < tokens.length && tokens[idx + 2].length >= 3) {
-					const trigram = `${w1} ${w2} ${tokens[idx + 2]}`;
-					phraseMap.set(trigram, (phraseMap.get(trigram) ?? 0) + 1);
-				}
-			}
+			indexLineTokens(line, wordCounts, phrasesByFirstWord);
 		}
 
 		this.fileEntries.set(filePath, {
@@ -358,7 +378,7 @@ export class CompletionEngine {
 		const canQueryWord = wordPrefix.length >= minLen;
 		const canQueryPhrase =
 			settings.indexNgramPhrases &&
-			previousWord.length >= 2 &&
+			previousWord.length >= 1 &&
 			wordPrefix.length >= 1;
 
 		if (!canQueryWord && !canQueryPhrase) {
@@ -613,45 +633,7 @@ export class CompletionEngine {
 				}
 			}
 
-			const stripped = line
-				.replace(/https?:\/\/\S+/g, " ")
-				.replace(/[[\]*_`~>#|]/g, " ");
-
-			const tokens: string[] = [];
-			const wordRegex = /[A-Za-z][A-Za-z0-9_-]{1,35}/g;
-			let match: RegExpExecArray | null;
-			while ((match = wordRegex.exec(stripped)) !== null) {
-				const word = match[0];
-				tokens.push(word);
-				if (word.length >= 4) {
-					const lower = word.toLowerCase();
-					const existing = wordCounts.get(lower);
-					if (existing) {
-						existing.count += 1;
-						if (word === lower) existing.canonical = word;
-					} else {
-						wordCounts.set(lower, { canonical: word, count: 1 });
-					}
-				}
-			}
-
-			for (let idx = 0; idx < tokens.length - 1; idx++) {
-				const w1 = tokens[idx];
-				const w2 = tokens[idx + 1];
-				if (w1.length < 2 || w2.length < 3) continue;
-				const firstKey = w1.toLowerCase();
-				let phraseMap = phrasesByFirstWord.get(firstKey);
-				if (!phraseMap) {
-					phraseMap = new Map();
-					phrasesByFirstWord.set(firstKey, phraseMap);
-				}
-				const bigram = `${w1} ${w2}`;
-				phraseMap.set(bigram, (phraseMap.get(bigram) ?? 0) + 1);
-				if (idx + 2 < tokens.length && tokens[idx + 2].length >= 3) {
-					const trigram = `${w1} ${w2} ${tokens[idx + 2]}`;
-					phraseMap.set(trigram, (phraseMap.get(trigram) ?? 0) + 1);
-				}
-			}
+			indexLineTokens(line, wordCounts, phrasesByFirstWord);
 		}
 
 		this.fileEntries.set(filePath, {

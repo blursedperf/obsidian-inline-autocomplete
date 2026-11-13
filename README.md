@@ -47,7 +47,7 @@ On iOS, iPadOS, and Android:
 Inline Autocomplete unifies multiple local sources into a ranked suggestion pipeline:
 
 1. **Custom Snippets** (`⚡`): High-priority user triggers (e.g., `callout` → `> [!note] $CURSOR\n> `, `today` → `{{date}}`).
-2. **N-Gram Phrases** (`💬`): 2-word and 3-word combinations indexed across your notes (e.g., typing `spaced r` suggests `repetition algorithms`).
+2. **N-Gram Phrases** (`💬`): 2-word and 3-word combinations indexed across your notes (e.g., typing `spaced r` suggests `repetition algorithms`). Short words and numbers stay in phrases, so case names such as `Donoghue v Stevenson` and `R v Smith` are learned as written, and phrases never run across punctuation.
 3. **Vault Words** (`🔤`): Words indexed from all Markdown notes, with a 3× relevance boost for words appearing in the currently active note.
 4. **Note Titles & Headings** (`📄` / `📑`): Names of existing notes and section headers in your vault.
 5. **Bundled English Dictionary** (`📘`): ~50,000 offline words indexed into instantaneous 2-character prefix lookup buckets (< 0.1 ms latency).

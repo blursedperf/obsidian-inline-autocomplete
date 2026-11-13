@@ -6,6 +6,7 @@ import {
 	extractQueryContext,
 	getDocumentCursorContext,
 	isCursorInLinkOrTag,
+	tokenizePhraseRuns,
 } from "../src/indexer.ts";
 import { DEFAULT_SETTINGS } from "../src/types.ts";
 
@@ -272,6 +273,49 @@ serendipity
 	assert.equal(popupClosed, true, "Tab must close suggestion popup");
 	assert.equal(tabPrevented, true, "Tab must prevent default tab event");
 	assert.equal(tabResult, false, "Tab must return false to consume event");
+}
+
+// Legal case names and citations: short connectors stay in phrases, punctuation ends them
+{
+	assert.deepEqual(tokenizePhraseRuns("In [[Donoghue v Stevenson]] [1932] AC 562, Lord Atkin's test"), [
+		["In"],
+		["Donoghue", "v", "Stevenson"],
+		["1932"],
+		["AC", "562"],
+		["Lord", "Atkin's", "test"],
+	]);
+
+	const engine = new CompletionEngine();
+	engine.indexFile(
+		"Law/Torts.md",
+		"Torts",
+		`Donoghue v Stevenson established the neighbour principle.
+See also Donoghue v Stevenson on duty of care.
+R v Smith concerned causation. In R v Smith the wound was operating.
+Under s 18 Australian Consumer Law, misleading conduct. Lord Atkin's speech.`
+	);
+
+	const phrasesFor = (prefix: string) =>
+		engine
+			.query(extractQueryContext(prefix, "Other", "Other.md"), DEFAULT_SETTINGS)
+			.filter((c) => c.kind === "phrase")
+			.map((c) => c.label);
+
+	// The case name is learned as written, never as "Donoghue Stevenson"
+	assert.ok(phrasesFor("Donoghue v").includes("Donoghue v Stevenson"));
+	assert.ok(!phrasesFor("Donoghue S").some((p) => p.startsWith("Donoghue Stevenson")));
+	// A single-letter previous word ("R v", "v S") still completes
+	assert.ok(phrasesFor("R v").includes("R v Smith"));
+	assert.ok(phrasesFor("v St").includes("v Stevenson"));
+	assert.ok(phrasesFor("s 18 Aus").includes("18 Australian Consumer"));
+	// Phrases stop at punctuation: no "principle See" across the full stop
+	assert.ok(!phrasesFor("principle S").some((p) => p.startsWith("principle See")));
+	// Possessives stay whole in phrases, and the base word is in the vocabulary
+	assert.ok(phrasesFor("Lord A").includes("Lord Atkin's speech"));
+	const words = engine
+		.query(extractQueryContext("Atki", "Other", "Other.md"), DEFAULT_SETTINGS)
+		.map((c) => c.insertText);
+	assert.ok(words.includes("Atkin"));
 }
 
 console.log("All Inline Autocomplete Indexer tests passed!");
