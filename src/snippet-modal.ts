@@ -26,7 +26,7 @@ export class CreateSnippetModal extends Modal {
 		contentEl.empty();
 		contentEl.addClass("iac-snippet-modal");
 
-		contentEl.createEl("h2", { text: "Add autocomplete snippet" });
+		this.setTitle("Add autocomplete snippet");
 
 		new Setting(contentEl)
 			.setName("Trigger prefix")
@@ -55,12 +55,18 @@ export class CreateSnippetModal extends Modal {
 
 		const expGroup = contentEl.createDiv({ cls: "iac-modal-field" });
 		expGroup.createEl("label", {
-			text: "Expansion text (supports {{date}}, {{time}}, {{title}}, and $CURSOR)",
-			cls: "iac-modal-label",
+			text: "Expansion text",
+			cls: "iac-modal-label setting-item-name",
+			attr: { for: "iac-snippet-expansion" },
+		});
+		expGroup.createDiv({
+			text: "Supports {{date}}, {{time}}, {{title}} and $CURSOR.",
+			cls: "iac-modal-hint setting-item-description",
 		});
 		const textarea = expGroup.createEl("textarea", {
 			cls: "iac-modal-textarea",
 			attr: {
+				id: "iac-snippet-expansion",
 				rows: "5",
 				placeholder: "Enter expanded text...",
 			},
@@ -71,6 +77,8 @@ export class CreateSnippetModal extends Modal {
 		});
 
 		const footer = contentEl.createDiv({ cls: "iac-modal-footer" });
+		const cancelBtn = footer.createEl("button", { text: "Cancel" });
+		cancelBtn.addEventListener("click", () => this.close());
 		const saveBtn = footer.createEl("button", {
 			text: "Save snippet",
 			cls: "mod-cta",

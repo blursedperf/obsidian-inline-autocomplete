@@ -129,14 +129,15 @@
 .iac-snippet-modal .iac-modal-field {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
-	margin-top: 12px;
+	gap: 4px;
+	padding-top: var(--size-4-3, 12px);
+	border-top: var(--border-width, 1px) solid var(--background-modifier-border);
 }
 
-.iac-snippet-modal .iac-modal-label {
-	font-size: 0.85rem;
-	font-weight: 600;
-	color: var(--text-normal);
+/* Label and hint carry Obsidian's setting name and description classes, so they match the rows above. */
+.iac-snippet-modal .iac-modal-hint {
+	padding-top: 0;
+	margin-bottom: 4px;
 }
 
 .iac-snippet-modal .iac-modal-textarea {
@@ -144,16 +145,13 @@
 	resize: vertical;
 	font-family: var(--font-monospace);
 	padding: 8px 10px;
-	border-radius: 6px;
-	border: 1px solid var(--background-modifier-border);
-	background: var(--background-primary);
-	color: var(--text-normal);
 }
 
 .iac-modal-footer {
 	display: flex;
 	justify-content: flex-end;
-	margin-top: 16px;
+	gap: var(--size-4-2, 8px);
+	margin-top: var(--size-4-4, 16px);
 }
 
 .iac-statusbar {
@@ -163,8 +161,4 @@
 
 .iac-statusbar.is-disabled {
 	color: var(--text-faint);
-}
-
-.iac-custom-words-input {
-	width: 100%;
 }
